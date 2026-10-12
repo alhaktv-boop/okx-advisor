@@ -1,11 +1,19 @@
 """Sends the chat id to the user on Telegram (never printed to logs)."""
-import os, json, urllib.request, urllib.parse
-tok = os.environ["TELEGRAM_BOT_TOKEN"]
+import os, json, urllib.request, urllib.parse, urllib.error
+tok = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+print("token length:", len(tok), "| has colon:", ":" in tok)
 def call(m, data=None):
-    return json.loads(urllib.request.urlopen(f"https://api.telegram.org/bot{tok}/{m}", data, timeout=20).read())
+    try:
+        return json.loads(urllib.request.urlopen(f"https://api.telegram.org/bot{tok}/{m}", data, timeout=20).read())
+    except urllib.error.HTTPError as e:
+        print(f"Telegram API error on {m}: HTTP {e.code}", "(token is wrong or revoked)" if e.code in (401, 404) else "")
+        raise SystemExit(1)
 ups = call("getUpdates")["result"]
+print("updates received:", len(ups))
 chats = {u["message"]["chat"]["id"] for u in ups if "message" in u}
-if not chats: print("No messages found: open the bot in Telegram, press Start, then rerun."); raise SystemExit(1)
+if not chats:
+    print("No messages found: open the bot in Telegram, send it any message (e.g. hello), then rerun.")
+    raise SystemExit(1)
 for cid in chats:
     call("sendMessage", urllib.parse.urlencode({"chat_id": cid, "text": f"Your chat id: {cid}\nSave it as GitHub secret TELEGRAM_CHAT_ID."}).encode())
 print("Sent chat id to Telegram.")
