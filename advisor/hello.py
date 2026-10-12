@@ -1,7 +1,10 @@
 """Sends the chat id to the user on Telegram (never printed to logs)."""
 import os, json, urllib.request, urllib.parse, urllib.error
-tok = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-print("token length:", len(tok), "| has colon:", ":" in tok)
+from advisor.tg import token
+tok = token()
+print("token found:", bool(tok), "| length:", len(tok))
+if not tok:
+    print("No valid token in secret TELEGRAM_BOT_TOKEN."); raise SystemExit(1)
 def call(m, data=None):
     try:
         return json.loads(urllib.request.urlopen(f"https://api.telegram.org/bot{tok}/{m}", data, timeout=20).read())

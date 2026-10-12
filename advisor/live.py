@@ -4,6 +4,7 @@ from .config import Config
 from .paper import PaperBroker
 from .risk import Risk
 from .strategy import signal
+from .tg import token, chat_id
 
 STATE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "state.json")
 BAR_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000}
@@ -21,7 +22,7 @@ def candles(cfg: Config, limit=300):
     return sorted(out, key=lambda x: x["ts"])
 
 def notify(text):
-    tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    tok, chat = token(), chat_id()
     if not (tok and chat):
         print("[no telegram]", text); return
     try:
