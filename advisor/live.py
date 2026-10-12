@@ -74,6 +74,8 @@ def main():
                         notify(f"🟢 PAPER: bought {q:.5f} {cfg.inst_id} @ {sig['entry']:.2f}\nstop {sig['stop']:.2f} | target {sig['target']:.2f}\nwhy: {sig['why']}")
     last = cs[-1]["ts"]
     save(b, r, last)
+    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":      # manual run = status check
+        notify(f"ℹ️ Advisor is running (paper mode). {cfg.inst_id} {cs[-1]['c']:.2f} | equity {b.equity(cs[-1]['c']):.2f} USDT | open position: {'yes' if b.pos else 'no'} | trades so far: {len(b.trades)}")
     print(f"equity {b.equity(cs[-1]['c']):.2f} pos={'yes' if b.pos else 'no'} trades={len(b.trades)} halted={r.halted}")
 
 if __name__ == "__main__":
