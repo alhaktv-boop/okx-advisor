@@ -1,0 +1,24 @@
+name: Backtest (real OKX history)
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days of history"
+        default: "45"
+permissions:
+  contents: write
+jobs:
+  bt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m advisor.backtest ${{ github.event.inputs.days }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Save result
+        run: |
+          git config user.name "advisor-bot"; git config user.email "bot@users.noreply.github.com"
+          git add data/backtest.md
+          git diff --cached --quiet || (git commit -m "backtest result" && git pull --rebase -q && git push -q)

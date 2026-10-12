@@ -29,6 +29,6 @@ class PaperBroker:
         proceeds = p["qty"] * px; fee = proceeds * self.cfg.fee_rate
         self.cash += proceeds - fee
         pnl = proceeds - fee - p["qty"] * p["entry"] - p["fee_in"]
-        self.trades.append(dict(inst=p.get("inst"), bar_in=p["bar"], bar_out=bar, kind=kind, pnl=pnl, why=p["why"]))
+        self.trades.append(dict(inst=p.get("inst"), bar_in=p["bar"], bar_out=bar, kind=kind, pnl=pnl, fees=p["fee_in"] + fee, why=p["why"]))
         self.pos = None
         return kind, pnl
