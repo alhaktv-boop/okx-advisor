@@ -1,0 +1,25 @@
+name: Momentum rotation (paper, daily)
+on:
+  schedule:
+    - cron: "20 0 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rotation
+  cancel-in-progress: false
+jobs:
+  step:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m advisor.rotation
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Save state
+        run: |
+          git config user.name "advisor-bot"; git config user.email "bot@users.noreply.github.com"
+          git add data/rotation.json
+          git diff --cached --quiet || (git commit -m "rotation state" && git pull --rebase -q && git push -q)
