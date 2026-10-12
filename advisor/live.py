@@ -14,8 +14,8 @@ def http_json(url, data=None):
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read())
 
-def candles(cfg: Config, limit=300):
-    q = urllib.parse.urlencode({"instId": cfg.inst_id, "bar": cfg.bar, "limit": limit})
+def candles(cfg: Config, inst=None, limit=300):
+    q = urllib.parse.urlencode({"instId": inst or cfg.inst_id, "bar": cfg.bar, "limit": limit})
     rows = http_json(f"https://www.okx.com/api/v5/market/candles?{q}")["data"]
     out = [dict(ts=int(r[0]), o=float(r[1]), h=float(r[2]), l=float(r[3]), c=float(r[4]), v=float(r[5]))
            for r in rows if r[8] == "1"]            # closed candles only
@@ -46,37 +46,61 @@ def save(b, r, last):
     json.dump({"cash": b.cash, "pos": b.pos, "trades": b.trades[-200:], "last_ts": last,
                "risk": {k: v for k, v in r.__dict__.items() if k != "cfg"}}, open(STATE, "w"), indent=1)
 
+def slip_for(cfg, inst):
+    return cfg.slippage if inst in ("BTC-USDT", "ETH-USDT") else cfg.alt_slippage
+
 def main():
     cfg = Config(); b, r, last = load(cfg)
-    cs = candles(cfg)
-    if len(cs) < 220: print("not enough candles"); return
+    data = {}
+    for inst in cfg.universe:
+        try:
+            cs = candles(cfg, inst)
+            if len(cs) >= 220: data[inst] = {c["ts"]: i for i, c in enumerate(cs)}, cs
+        except Exception as e:
+            print("skip", inst, type(e).__name__)
+    if not data: print("no data"); return
+    all_ts = sorted(set.intersection(*[set(m) for m, _ in data.values()]))   # bars present for every coin
     first_run = last == 0
-    new = [i for i, c in enumerate(cs) if c["ts"] > last]
-    if first_run: new = new[-1:]                      # don't replay history on first run
-    for i in new:
-        c, idx = cs[i], cs[i]["ts"] // BAR_MS[cfg.bar]
-        r.new_bar(str(c["ts"] // 86_400_000), b.equity(c["c"]), idx)
+    new = [t for t in all_ts if t > last]
+    if first_run: new = new[-1:]
+    def px(inst, t):
+        m, cs = data[inst]; return cs[m[t]]
+    for t in new:
+        idx = t // BAR_MS[cfg.bar]
+        held = b.pos["inst"] if b.pos else None
+        eq_price = px(held, t)["c"] if held in data else (b.pos["entry"] if b.pos else 0)
+        eq = b.equity(eq_price)
+        r.new_bar(str(t // 86_400_000), eq, idx)
         was_halted = r.halted
-        res = b.check_exit(c, idx)
-        if res:
-            r.closed(idx)
-            notify(f"{'✅' if res[1] > 0 else '❌'} PAPER: sold {cfg.inst_id} ({res[0]}) P&L {res[1]:+.2f} USDT | equity {b.equity(c['c']):.2f}")
+        if b.pos and held in data:
+            res = b.check_exit(px(held, t), idx)
+            if res:
+                r.closed(idx)
+                eq = b.equity(0)
+                notify(f"{'✅' if res[1] > 0 else '❌'} PAPER: sold {held} ({res[0]}) P&L {res[1]:+.2f} USDT | equity {eq:.2f}")
         if r.halted and not was_halted:
             notify("🛑 BOT HALTED: max drawdown reached. Human review needed.")
         if b.pos is None and not r.halted:
-            ok, why = r.allowed(b.equity(c["c"]), idx)
+            ok, why = r.allowed(b.equity(0), idx)
             if ok:
-                sig = signal(cs[max(0, i - 299): i + 1], cfg)
-                if sig:
-                    q = r.size(b.equity(c["c"]), sig["entry"], sig["stop"])
-                    if q > 0 and b.buy(q, sig["entry"], sig["stop"], sig["target"], sig["why"], idx):
+                best = None
+                for inst, (m, cs) in data.items():
+                    i = m[t]
+                    sig = signal(cs[max(0, i - 299): i + 1], cfg)
+                    if sig and (best is None or sig["score"] > best[1]["score"]): best = (inst, sig)
+                if best:
+                    inst, sig = best; sl = slip_for(cfg, inst)
+                    q = r.size(b.equity(0), sig["entry"], sig["stop"], sl)
+                    if q > 0 and b.buy(q, sig["entry"], sig["stop"], sig["target"], sig["why"], idx, inst, sl):
                         r.opened()
-                        notify(f"🟢 PAPER: bought {q:.5f} {cfg.inst_id} @ {sig['entry']:.2f}\nstop {sig['stop']:.2f} | target {sig['target']:.2f}\nwhy: {sig['why']}")
-    last = cs[-1]["ts"]
+                        notify(f"🟢 PAPER: bought {q:.5f} {inst} @ {sig['entry']:.4f}\nstop {sig['stop']:.4f} | target {sig['target']:.4f}\nwhy: {sig['why']} (best of {len(data)} coins)")
+    last = all_ts[-1]
     save(b, r, last)
+    held = b.pos["inst"] if b.pos else None
+    eq = b.equity(px(held, last)["c"]) if held in data else b.equity(0)
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":      # manual run = status check
-        notify(f"ℹ️ Advisor is running (paper mode). {cfg.inst_id} {cs[-1]['c']:.2f} | equity {b.equity(cs[-1]['c']):.2f} USDT | open position: {'yes' if b.pos else 'no'} | trades so far: {len(b.trades)}")
-    print(f"equity {b.equity(cs[-1]['c']):.2f} pos={'yes' if b.pos else 'no'} trades={len(b.trades)} halted={r.halted}")
+        notify(f"ℹ️ Advisor is running (paper mode), scanning {len(data)} coins. equity {eq:.2f} USDT | open position: {held or 'no'} | trades so far: {len(b.trades)}")
+    print(f"equity {eq:.2f} coins={len(data)} pos={held or 'no'} trades={len(b.trades)} halted={r.halted}")
 
 if __name__ == "__main__":
     main()

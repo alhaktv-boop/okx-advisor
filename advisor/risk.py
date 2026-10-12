@@ -21,10 +21,11 @@ class Risk:
         if equity < self.day_start_equity * (1 - c.max_daily_loss_pct): return False, "daily loss limit"
         return True, ""
 
-    def size(self, equity: float, entry: float, stop: float) -> float:
+    def size(self, equity: float, entry: float, stop: float, slip=None) -> float:
         """Quantity so that hitting the stop loses at most risk_per_trade of equity."""
         c = self.cfg
-        per_unit_loss = (entry - stop) + entry * 2 * (c.fee_rate + c.slippage)
+        slip = c.slippage if slip is None else slip
+        per_unit_loss = (entry - stop) + entry * 2 * (c.fee_rate + slip)
         if per_unit_loss <= 0: return 0.0
         qty = equity * c.risk_per_trade / per_unit_loss
         return min(qty, equity * c.max_position_pct / entry)

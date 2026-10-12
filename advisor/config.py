@@ -3,7 +3,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Config:
-    inst_id: str = "BTC-USDT"          # start with one liquid pair only
+    inst_id: str = "BTC-USDT"          # default pair for the single-coin backtest
+    universe: tuple = ("BTC-USDT", "ETH-USDT", "SOL-USDT", "XRP-USDT", "BNB-USDT",
+                       "DOGE-USDT", "ADA-USDT", "LINK-USDT", "AVAX-USDT", "LTC-USDT")  # liquid coins only
+    alt_slippage: float = 0.001        # assumed slippage per side for coins other than BTC/ETH
     bar: str = "5m"                    # candle size
     start_cash: float = 400.0          # paper money (USDT ~ EUR)
     fee_rate: float = 0.001            # 0.1% per side (OKX spot taker, worst case)

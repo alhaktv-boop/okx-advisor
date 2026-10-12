@@ -19,5 +19,6 @@ def signal(candles, cfg: Config):
     target = entry + cfg.target_atr * a[i]
     if (target - entry) / entry < cfg.min_edge_pct:
         return None                       # move too small: fees would eat it
-    return {"entry": entry, "stop": stop, "target": target,
+    strength = ((e50[i] - e200[i]) / e200[i]) / (a[i] / entry)   # trend strength per unit of volatility
+    return {"score": strength, "entry": entry, "stop": stop, "target": target,
             "why": f"uptrend (EMA50>EMA200), RSI {r[i-1]:.0f}->{r[i]:.0f}, ATR {a[i]:.2f}"}
