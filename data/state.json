@@ -1,0 +1,14 @@
+{
+ "cash": 400.0,
+ "pos": null,
+ "trades": [],
+ "last_ts": 1791762900000,
+ "risk": {
+  "day": "20737",
+  "day_start_equity": 400.0,
+  "trades_today": 0,
+  "peak": 400.0,
+  "halted": false,
+  "cooldown_until": -1
+ }
+}
