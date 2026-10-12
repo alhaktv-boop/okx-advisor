@@ -8,6 +8,7 @@ class Config:
                        "DOGE-USDT", "ADA-USDT", "LINK-USDT", "AVAX-USDT", "LTC-USDT")  # liquid coins only
     alt_slippage: float = 0.001        # assumed slippage per side for coins other than BTC/ETH
     bar: str = "5m"                    # candle size
+    mode: str = "pullback"             # "pullback" (buy dips in uptrend) or "breakout"
     start_cash: float = 400.0          # paper money (USDT ~ EUR)
     fee_rate: float = 0.001            # 0.1% per side (OKX spot taker, worst case)
     slippage: float = 0.0005           # 0.05% assumed slippage per side

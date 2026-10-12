@@ -11,8 +11,12 @@ def signal(candles, cfg: Config):
     e50, e200, r, a = ema(c, 50), ema(c, 200), rsi(c), atr(h, l, c)
     i = len(c) - 1
     trend_up = c[i] > e200[i] and e50[i] > e200[i]
-    pullback = r[i - 1] < 35 and r[i] > r[i - 1] and r[i] < 50   # RSI turning up from oversold
-    if not (trend_up and pullback):
+    if cfg.mode == "breakout":
+        hi_now, hi_prev = max(h[i - 20:i]), max(h[i - 21:i - 1])
+        trigger = c[i] > hi_now and c[i - 1] <= hi_prev          # first close above the 20-bar high
+    else:
+        trigger = r[i - 1] < 35 and r[i] > r[i - 1] and r[i] < 50   # RSI turning up from oversold
+    if not (trend_up and trigger):
         return None
     entry = c[i]
     stop = entry - cfg.stop_atr * a[i]
@@ -21,4 +25,4 @@ def signal(candles, cfg: Config):
         return None                       # move too small: fees would eat it
     strength = ((e50[i] - e200[i]) / e200[i]) / (a[i] / entry)   # trend strength per unit of volatility
     return {"score": strength, "entry": entry, "stop": stop, "target": target,
-            "why": f"uptrend (EMA50>EMA200), RSI {r[i-1]:.0f}->{r[i]:.0f}, ATR {a[i]:.2f}"}
+            "why": f"{cfg.mode}: uptrend (EMA50>EMA200), RSI {r[i-1]:.0f}->{r[i]:.0f}, ATR {a[i]:.4g}"}

@@ -7,7 +7,7 @@ from .strategy import signal
 from .tg import token, chat_id
 
 STATE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "state.json")
-BAR_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000}
+BAR_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1H": 3_600_000, "4H": 14_400_000}
 
 def http_json(url, data=None):
     req = urllib.request.Request(url, data=data, headers={"User-Agent": "okx-advisor"})

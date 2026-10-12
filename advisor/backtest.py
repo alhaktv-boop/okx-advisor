@@ -26,13 +26,16 @@ def history(cfg, inst, days):
         time.sleep(0.12)
     return sorted((c for c in out.values() if c["ts"] >= stop_ts - 300 * BAR_MS[cfg.bar]), key=lambda c: c["ts"])
 
-def simulate(data, cfg, warmup=300):
+def simulate(data, cfg, warmup=300, start_ts=0, end_ts=1 << 62):
     """data: {inst: {ts: candle}}; same decision logic as live.main()."""
     ts_all = sorted(set.intersection(*[set(m) for m in data.values()]))
     seq = {inst: [m[t] for t in ts_all] for inst, m in data.items()}
     b, r, curve = PaperBroker(cfg), Risk(cfg), []
     for k in range(warmup, len(ts_all)):
-        t = ts_all[k]; idx = t // BAR_MS[cfg.bar]
+        t = ts_all[k]
+        if t < start_ts: continue
+        if t >= end_ts: break
+        idx = t // BAR_MS[cfg.bar]
         held = b.pos["inst"] if b.pos else None
         r.new_bar(str(t // 86_400_000), b.equity(seq[held][k]["c"]) if held else b.cash, idx)
         if held:
