@@ -14,8 +14,8 @@
   "LTC-USDT": 0.0,
   "BNB-USDT": 0.0
  },
- "last_ts": 1795219200000,
- "last_rebal": 1794700800000,
+ "last_ts": 1795305600000,
+ "last_rebal": 1795305600000,
  "equity": [
   {
    "ts": 1791676800000,
@@ -226,6 +226,11 @@
    "ts": 1795219200000,
    "eq": 309.67,
    "btc": 60213.4
+  },
+  {
+   "ts": 1795305600000,
+   "eq": 309.67,
+   "btc": 61268.8
   }
  ],
  "log": [
@@ -270,6 +275,11 @@
   },
   {
    "ts": 1794700800000,
+   "why": "BTC under its 100-day average: stay in cash",
+   "acts": []
+  },
+  {
+   "ts": 1795305600000,
    "why": "BTC under its 100-day average: stay in cash",
    "acts": []
   }
